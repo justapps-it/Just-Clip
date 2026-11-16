@@ -32,7 +32,7 @@ cd android
 ./gradlew :app:testDebugUnitTest       # JVM tests (parsing, detection, virality, layout)
 ./gradlew :app:assembleRelease         # needs JUSTCLIP_KEYSTORE* in ~/.gradle/gradle.properties
 cp app/build/outputs/apk/release/app-release.apk release/JustClip.apk
-git tag android-v1.0.1 && git push origin android-v1.0.1   # the workflow creates the release
+git commit -am "Android 1.0.1" && git push   # the workflow creates the android-v1.0.1 release
 ```
 
 Then update `src/app-release.ts` (version, size, SHA-256) and bump `versionCode` / `versionName` in `android/app/build.gradle.kts` before building. The release keystore is kept outside the repository: keep a backup, Android only accepts updates signed with the same key.

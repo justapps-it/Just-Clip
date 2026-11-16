@@ -1,15 +1,14 @@
 name: Android release
 
-# Push a tag like "android-v1.0.0" to publish android/release/JustClip.apk
-# (built and signed locally, see README) as a GitHub release asset.
+# Publishes android/release/JustClip.apk (built and signed locally, see
+# README) as a GitHub release whenever it changes. The tag is
+# android-v<versionName> from android/app/build.gradle.kts.
 on:
   push:
-    tags: ['android-v*']
+    paths:
+      - android/release/JustClip.apk
+      - .github/workflows/android-release.yml
   workflow_dispatch:
-    inputs:
-      tag:
-        description: Release tag (e.g. android-v1.0.0)
-        required: true
 
 permissions:
   contents: write
@@ -19,14 +18,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
-      - name: Checksum
-        run: sha256sum android/release/JustClip.apk | tee android/release/JustClip.apk.sha256
+      - name: Version and checksum
+        id: v
+        run: |
+          version=$(grep -oP 'versionName\s*=\s*"\K[^"]+' android/app/build.gradle.kts)
+          echo "tag=android-v$version" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          sha256sum android/release/JustClip.apk | tee android/release/JustClip.apk.sha256
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
-          name: JustClip for Android ${{ github.event.inputs.tag || github.ref_name }}
+          tag_name: ${{ steps.v.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: JustClip for Android ${{ steps.v.outputs.version }}
           make_latest: true
           files: |
             android/release/JustClip.apk
