@@ -7,7 +7,16 @@ let instance: Promise<FFmpeg> | undefined;
 let progressCb: ((p: number) => void) | undefined;
 let log: string[] = [];
 
-export const multiThreaded = () => typeof crossOriginIsolated !== 'undefined' && crossOriginIsolated && typeof SharedArrayBuffer !== 'undefined';
+function forced(): string | null {
+  try {
+    return localStorage.getItem('justclip-ffmpeg');
+  } catch {
+    return null;
+  }
+}
+
+export const multiThreaded = () =>
+  forced() !== 'st' && typeof crossOriginIsolated !== 'undefined' && crossOriginIsolated && typeof SharedArrayBuffer !== 'undefined';
 
 export function getFFmpeg(onDownload?: (f: number) => void): Promise<FFmpeg> {
   instance ??= (async () => {
@@ -36,6 +45,12 @@ export function getFFmpeg(onDownload?: (f: number) => void): Promise<FFmpeg> {
 /** Runs one FFmpeg command; throws with the tail of the log on failure. */
 export async function run(args: string[], onProgress?: (p: number) => void): Promise<void> {
   const ff = await getFFmpeg();
+  if (multiThreaded()) {
+    // ffmpeg-core-mt crashes ("function signature mismatch") when it picks the
+    // thread count itself: always set it explicitly.
+    const n = String(Math.max(2, Math.min(4, navigator.hardwareConcurrency || 4)));
+    args = ['-filter_threads', n, '-filter_complex_threads', n, ...args.slice(0, -1), '-threads', n, args[args.length - 1]];
+  }
   log = [];
   progressCb = onProgress;
   try {

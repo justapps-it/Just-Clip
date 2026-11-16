@@ -29,8 +29,9 @@ const page = await browser.newPage({ locale: 'en-US', viewport: { width: 1280, h
 page.on('pageerror', (e) => console.log('pageerror', e.message));
 page.on('console', (m) => m.type() === 'error' && console.log('console', m.text().slice(0, 300)));
 await page.addInitScript((subs) => {
-  localStorage.setItem('justclip-settings', JSON.stringify({ subtitles: subs, maxMoments: 5 }));
-}, Boolean(process.env.SUBS));
+  localStorage.setItem('justclip-settings', JSON.stringify({ subtitles: subs[0], maxMoments: 5 }));
+  if (subs[1]) localStorage.setItem('justclip-ffmpeg', subs[1]);
+}, [Boolean(process.env.SUBS), process.env.FFMPEG || '']);
 await page.goto(URL);
 console.log('isolated:', await page.evaluate(() => crossOriginIsolated));
 
@@ -93,6 +94,26 @@ const outputs = await first.locator('a.btn.accent').evaluateAll((as) =>
 );
 console.log(outputs);
 if (SHOTS) {
+  // A frame of each output, to check layout and captions by eye.
+  const frames = await first.locator('a.btn.accent').evaluateAll((as) =>
+    Promise.all(
+      as.map(async (a) => {
+        const v = document.createElement('video');
+        v.muted = true;
+        v.src = a.href;
+        await new Promise((r) => (v.onloadeddata = r));
+        v.currentTime = Math.min(v.duration - 1, 12);
+        await new Promise((r) => (v.onseeked = r));
+        const c = document.createElement('canvas');
+        c.width = v.videoWidth;
+        c.height = v.videoHeight;
+        c.getContext('2d').drawImage(v, 0, 0);
+        return c.toDataURL('image/jpeg', 0.85);
+      }),
+    ),
+  );
+  const { writeFileSync } = await import('node:fs');
+  frames.forEach((d, i) => writeFileSync(`${SHOTS}/frame${i}.jpg`, Buffer.from(d.split(',')[1], 'base64')));
   await first.scrollIntoViewIfNeeded();
   await page.screenshot({ path: `${SHOTS}/clip.png`, fullPage: true });
 }

@@ -70,7 +70,7 @@ function MomentCard({ m, i, st, session }: { m: Moment; i: number; st: SessionSt
     <li className={`moment status-${m.status}`}>
       <div className="moment-media">
         {vertical ? (
-          <video src={vertical.url} poster={m.thumb} controls playsInline preload="metadata" className={vertical.format} />
+          <video src={`${vertical.url}#t=0.5`} poster={vertical.format === 'vertical' ? undefined : m.thumb} controls playsInline preload="metadata" className={vertical.format} />
         ) : m.thumb ? (
           <img src={m.thumb} alt="" />
         ) : (
