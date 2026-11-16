@@ -19,6 +19,8 @@ export interface Settings {
   bufferMinutes: number;
   /** VOD: how many moments to propose. */
   maxMoments: number;
+  /** Title card in the first seconds of the clip. */
+  hookTitle: boolean;
 }
 
 export const DEFAULTS: Settings = {
@@ -34,6 +36,7 @@ export const DEFAULTS: Settings = {
   autoRender: true,
   bufferMinutes: 3,
   maxMoments: 12,
+  hookTitle: true,
 };
 
 const KEY = 'justclip-settings';

@@ -83,17 +83,45 @@ function MomentCard({ m, i, st, session }: { m: Moment; i: number; st: SessionSt
         <div className="moment-top">
           <strong>
             #{i + 1} · {label(st, m.peak, lang)}
+            <span className="muted small"> · {Math.round(m.end - m.start)}s{m.manual ? ` · ${t('manual')}` : ''}</span>
           </strong>
-          <span className="muted small">
-            {m.manual ? t('manual') : `${t('score')} ${m.score.toFixed(1)}`} · {Math.round(m.end - m.start)}s
-          </span>
+          {m.virality && (
+            <span className={`viral ${m.virality.score >= 70 ? 'hot' : m.virality.score >= 45 ? 'warm' : ''}`} title={t('virality')}>
+              <b>{m.virality.score}</b>
+              <small>{t('virality')}</small>
+            </span>
+          )}
         </div>
+        {m.virality && (
+          <ul className="reasons">
+            {[...m.virality.parts]
+              .sort((a, b) => b.value - a.value)
+              .filter((p) => p.value >= 0.45)
+              .slice(0, 3)
+              .map((p) => (
+                <li key={p.key}>
+                  {t(p.key as Key)}
+                  {p.key === 'emotion' && m.virality!.emotion ? ` · ${t(m.virality!.emotion as Key)}` : ''}
+                </li>
+              ))}
+          </ul>
+        )}
         {m.samples.length > 0 && (
           <ul className="samples">
             {m.samples.map((s, k) => (
               <li key={k}>{s}</li>
             ))}
           </ul>
+        )}
+        {(m.status === 'found' || m.status === 'error') && !m.manual && (
+          <input
+            className="hook-input"
+            value={m.hook}
+            maxLength={40}
+            placeholder={t('hookPlaceholder')}
+            onChange={(e) => session.setHook(m.id, e.target.value)}
+            aria-label={t('hookPlaceholder')}
+          />
         )}
         {m.transcript && <p className="transcript">“{m.transcript.length > 160 ? m.transcript.slice(0, 157) + '…' : m.transcript}”</p>}
 
@@ -219,6 +247,9 @@ function SettingsPanel({ live, onLayout }: { live: boolean; onLayout(): void }) 
           ))}
         </select>
       </fieldset>
+      <label className="check">
+        <input type="checkbox" checked={s.hookTitle} onChange={(e) => updateSettings({ hookTitle: e.target.checked })} /> {t('hookTitleSetting')}
+      </label>
       {live ? (
         <>
           <label className="check">
@@ -344,7 +375,7 @@ export function SessionView({ session, onBack }: { session: Session; onBack(): v
         {[...st.moments]
           .map((m, i) => ({ m, i }))
           .reverse()
-          .sort((a, b) => (live ? b.m.peak - a.m.peak : a.m.peak - b.m.peak))
+          .sort((a, b) => (live ? b.m.peak - a.m.peak : (b.m.virality?.score ?? -1) - (a.m.virality?.score ?? -1) || a.m.peak - b.m.peak))
           .map(({ m, i }) => (
             <MomentCard key={m.id} m={m} i={i} st={st} session={session} />
           ))}

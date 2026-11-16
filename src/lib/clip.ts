@@ -11,6 +11,8 @@ export interface RenderOptions {
   layout: LayoutSettings;
   subtitles: boolean;
   language: string;
+  /** Title shown at the start of the clip. */
+  hook?: string;
 }
 
 export interface RenderResult {
@@ -65,9 +67,13 @@ export async function renderClip(range: MediaRange, opts: RenderOptions, onProgr
       const [W, H] = outputSize(format, opts.quality);
       const probe = videoFilter(format, opts.quality, opts.layout, null);
       let subs: string | null = null;
-      if (words.length) {
+      if (words.length || opts.hook) {
         subs = `${dir}/sub-${format}.ass`;
-        await write(`sub-${format}.ass`, buildAss(words, { width: W, height: H, fontSize: probe.fontSize, y: probe.captionY, maxWords: format === 'vertical' ? 3 : 5 }));
+        const hook = opts.hook ? { text: opts.hook, until: Math.min(3, range.duration), y: format === 'vertical' ? H * 0.09 : H * 0.12 } : undefined;
+        await write(
+          `sub-${format}.ass`,
+          buildAss(words, { width: W, height: H, fontSize: probe.fontSize, y: probe.captionY, maxWords: format === 'vertical' ? 3 : 5 }, hook),
+        );
       }
       const { graph } = videoFilter(format, opts.quality, opts.layout, subs);
       const out = `${dir}/out-${format}.mp4`;
@@ -109,6 +115,30 @@ export async function extractFrame(range: MediaRange): Promise<Blob> {
     return new Blob([data as BlobPart], { type: 'image/jpeg' });
   } finally {
     for (const f of [...range.files.map((f) => f.name), 'list.txt', 'frame.jpg']) await ff.deleteFile(`${dir}/${f}`).catch(() => {});
+    await ff.deleteDir(dir).catch(() => {});
+  }
+}
+
+/** Mono 16 kHz PCM of a media range (for loudness analysis). */
+export async function extractPcm(range: MediaRange): Promise<Float32Array> {
+  const ff = await getFFmpeg();
+  const dir = `/pcm${++jobSeq}`;
+  await ff.createDir(dir);
+  const names = range.files.map((f) => `${dir}/${f.name}`);
+  try {
+    for (const f of range.files) await ff.writeFile(`${dir}/${f.name}`, f.data);
+    let input: string[];
+    if (range.kind === 'webm') {
+      await ff.writeFile(`${dir}/list.txt`, range.files.map((f) => `file '${dir}/${f.name}'`).join('\n'));
+      names.push(`${dir}/list.txt`);
+      input = ['-f', 'concat', '-safe', '0', '-ss', range.offset.toFixed(3), '-t', range.duration.toFixed(3), '-i', `${dir}/list.txt`];
+    } else input = ['-ss', range.offset.toFixed(3), '-t', range.duration.toFixed(3), '-i', names[0]];
+    await run([...input, '-vn', '-ac', '1', '-ar', '16000', '-f', 'f32le', `${dir}/a.pcm`]);
+    names.push(`${dir}/a.pcm`);
+    const pcm = (await ff.readFile(`${dir}/a.pcm`)) as Uint8Array;
+    return new Float32Array(pcm.buffer.slice(pcm.byteOffset, pcm.byteOffset + pcm.byteLength));
+  } finally {
+    for (const n of names) await ff.deleteFile(n).catch(() => {});
     await ff.deleteDir(dir).catch(() => {});
   }
 }

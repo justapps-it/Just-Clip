@@ -3,6 +3,20 @@ import { createContext, useContext } from 'react';
 export type Lang = 'it' | 'en';
 
 const en = {
+  virality: 'Virality',
+  hookTitleSetting: 'Title card at the start',
+  hookPlaceholder: 'Title for the first seconds (empty = none)',
+  intensity: 'Chat explodes',
+  consensus: 'Chat in unison',
+  emotion: 'Strong reaction',
+  surprise: 'Sudden',
+  audio: 'Loud on stream',
+  structure: 'Good rhythm',
+  laugh: 'laughs',
+  hype: 'hype',
+  shock: 'shock',
+  clip: 'clip requests',
+  sortHint: 'Sorted by virality',
   heroA: 'Your stream.',
   heroB: 'Already clipped.',
   lead: 'Paste a Twitch or YouTube link: JustClip watches the chat, finds the moments where it explodes and turns them into horizontal and vertical clips with subtitles. Everything is processed in your browser.',
@@ -110,6 +124,20 @@ const en = {
 export type Key = keyof typeof en;
 
 const it: Record<Key, string> = {
+  virality: 'Viralità',
+  hookTitleSetting: 'Titolo all’inizio della clip',
+  hookPlaceholder: 'Titolo per i primi secondi (vuoto = nessuno)',
+  intensity: 'Chat esplosa',
+  consensus: 'Chat all’unisono',
+  emotion: 'Reazione forte',
+  surprise: 'Improvviso',
+  audio: 'Picco audio',
+  structure: 'Ritmo giusto',
+  laugh: 'risate',
+  hype: 'hype',
+  shock: 'shock',
+  clip: 'richieste di clip',
+  sortHint: 'Ordinati per viralità',
   heroA: 'La tua live.',
   heroB: 'Già in clip.',
   lead: 'Incolla un link Twitch o YouTube: JustClip segue la chat, trova i momenti in cui esplode e li trasforma in clip orizzontali e verticali con i sottotitoli. Tutto viene elaborato nel tuo browser.',

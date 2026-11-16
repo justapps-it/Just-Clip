@@ -61,7 +61,9 @@ if (!moments) throw new Error('no moments');
 
 const t1 = Date.now();
 const first = page.locator('.moment').first();
-console.log('moment:', (await first.locator('.moment-top').textContent())?.replace(/\s+/g, ' '), '|', (await first.locator('.samples').textContent().catch(() => ''))?.slice(0, 80));
+console.log('moment:', (await first.locator('.moment-top').textContent())?.replace(/\s+/g, ' '), '|', await first.locator('.reasons').textContent().catch(() => ''), '| title:', await first.locator('.hook-input').inputValue().catch(() => ''));
+await page.waitForTimeout(8000); // let the audio scan refine scores
+console.log('after audio scan:', (await page.locator('.moment .viral b').allTextContents()).join(' '));
 await first.getByRole('button', { name: 'Create clip' }).click();
 let last = '';
 const deadline = Date.now() + 15 * 60_000;
@@ -102,18 +104,22 @@ if (SHOTS) {
         v.muted = true;
         v.src = a.href;
         await new Promise((r) => (v.onloadeddata = r));
-        v.currentTime = Math.min(v.duration - 1, 12);
-        await new Promise((r) => (v.onseeked = r));
-        const c = document.createElement('canvas');
-        c.width = v.videoWidth;
-        c.height = v.videoHeight;
-        c.getContext('2d').drawImage(v, 0, 0);
-        return c.toDataURL('image/jpeg', 0.85);
+        const shots = [];
+        for (const at of [1.5, 12]) {
+          v.currentTime = Math.min(v.duration - 1, at);
+          await new Promise((r) => (v.onseeked = r));
+          const c = document.createElement('canvas');
+          c.width = v.videoWidth;
+          c.height = v.videoHeight;
+          c.getContext('2d').drawImage(v, 0, 0);
+          shots.push(c.toDataURL('image/jpeg', 0.85));
+        }
+        return shots;
       }),
     ),
   );
   const { writeFileSync } = await import('node:fs');
-  frames.forEach((d, i) => writeFileSync(`${SHOTS}/frame${i}.jpg`, Buffer.from(d.split(',')[1], 'base64')));
+  frames.flat().forEach((d, i) => writeFileSync(`${SHOTS}/frame${i}.jpg`, Buffer.from(d.split(',')[1], 'base64')));
   await first.scrollIntoViewIfNeeded();
   await page.screenshot({ path: `${SHOTS}/clip.png`, fullPage: true });
 }

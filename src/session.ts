@@ -2,7 +2,7 @@
 // the detected moments and the render queue.
 import { useSyncExternalStore } from 'react';
 import { api, type ChatMessage } from './lib/api';
-import { extractFrame, renderClip, type Stage } from './lib/clip';
+import { extractFrame, extractPcm, renderClip, type Stage } from './lib/clip';
 import type { Format } from './lib/layout';
 import { activitySeries, findPeaks, LiveDetector, sampleMessages, smooth } from './lib/peaks';
 import {
@@ -16,6 +16,7 @@ import {
   type RecorderStatus,
 } from './lib/sources';
 import { getSettings, layoutFor } from './settings';
+import { audioFeatures, chatFeatures, smartBounds, virality, type AudioFeatures, type ChatFeatures, type Virality } from './lib/virality';
 
 export type MomentStatus = 'found' | 'waiting' | 'queued' | 'working' | 'done' | 'error';
 
@@ -27,8 +28,15 @@ export interface Moment {
   start: number;
   end: number;
   score: number;
+  /** Robust z-score of the chat peak. */
+  z: number;
   samples: string[];
   manual: boolean;
+  chat?: ChatFeatures;
+  audio?: AudioFeatures;
+  virality?: Virality;
+  /** Title shown at the start of the clip (editable). */
+  hook: string;
   status: MomentStatus;
   stage?: Stage;
   progress: number | null;
@@ -76,6 +84,8 @@ export class Session {
   private queue: string[] = [];
   private working = false;
   private abort = new AbortController();
+  private scanning = false;
+  private scanned = new Set<string>();
   layoutKey: string;
 
   constructor(kind: SessionKind, info: { title: string; channel: string; thumbnail?: string; duration?: number }) {
@@ -151,12 +161,17 @@ export class Session {
       for (let j = i; j < Math.min(s.length, i + step); j++) acc += s[j];
       values.push(acc);
     }
-    const peaks = findPeaks(this.messages, 0, dur, { sensitivity: st.sensitivity, minGap: st.before + st.after, limit: st.maxMoments });
+    // Take more candidates than needed and keep the most viral ones.
+    const peaks = findPeaks(this.messages, 0, dur, { sensitivity: st.sensitivity, minGap: st.before + st.after, limit: st.maxMoments * 3 });
     const keep = this.state.moments.filter((m) => m.manual || m.status !== 'found');
     const fresh = peaks
       .filter((p) => !keep.some((m) => Math.abs(m.peak - p.t) < (st.before + st.after) / 2))
-      .map((p) => this.newMoment(p.t, p.score, false));
+      .map((p) => this.newMoment(p.t, p.score, false, p.t, p.z))
+      .sort((a, b) => (b.virality?.score ?? 0) - (a.virality?.score ?? 0))
+      .slice(0, Math.max(0, st.maxMoments - keep.length));
+    this.scanned.clear();
     this.set({ activity: { t0: 0, step, values }, moments: [...keep, ...fresh].sort((a, b) => a.peak - b.peak) });
+    void this.scanAudio();
   }
 
   // ---- Twitch live -----------------------------------------------------------
@@ -243,7 +258,7 @@ export class Session {
       const now = Date.now() / 1000;
       const peak = this.detector!.poll(now);
       if (peak) {
-        const m = this.newMoment(peak.t - latency(), peak.score, false, peak.t);
+        const m = this.newMoment(peak.t - latency(), peak.score, false, peak.t, peak.z);
         this.set({ moments: [...this.state.moments, m] });
         if (getSettings().autoRender) this.render(m.id);
       }
@@ -258,20 +273,74 @@ export class Session {
   }
 
   // ---- moments ---------------------------------------------------------------
-  private newMoment(mediaPeak: number, score: number, manual: boolean, chatPeak = mediaPeak): Moment {
+  private newMoment(mediaPeak: number, score: number, manual: boolean, chatPeak = mediaPeak, z = 0): Moment {
     const st = getSettings();
+    const start = Math.max(0, mediaPeak - st.before);
+    const end = this.state.duration ? Math.min(this.state.duration, mediaPeak + st.after) : mediaPeak + st.after;
+    const chat = this.messages.length ? chatFeatures(this.messages, chatPeak) : undefined;
     return {
       id: `m${++momentSeq}`,
       peak: mediaPeak,
-      start: Math.max(0, mediaPeak - st.before),
-      end: this.state.duration ? Math.min(this.state.duration, mediaPeak + st.after) : mediaPeak + st.after,
+      start,
+      end,
       score,
+      z,
       samples: sampleMessages(this.messages, chatPeak),
       manual,
+      chat,
+      virality: chat && !manual ? virality({ z, chat, duration: end - start }) : undefined,
+      hook: chat && !manual ? hookFrom(chat) : '',
       status: 'found',
       progress: null,
       outputs: [],
     };
+  }
+
+  setHook(id: string, hook: string) {
+    this.setMoment(id, { hook });
+  }
+
+  /** Re-scores a moment once its audio is known, and tightens its bounds. */
+  private applyAudio(m: Moment, audio: AudioFeatures, rangeStart: number): Partial<Moment> {
+    const st = getSettings();
+    if (m.manual) return { audio };
+    const b = smartBounds(m.peak, st.before, st.after, audio, rangeStart);
+    const start = Math.max(0, b.start);
+    const end = this.state.duration ? Math.min(this.state.duration, b.end) : b.end;
+    return {
+      audio,
+      start,
+      end,
+      virality: m.chat ? virality({ z: m.z, chat: m.chat, audio, duration: end - start, hookAt: b.hookAt }) : m.virality,
+    };
+  }
+
+  /** VOD: listens to the audio around each moment to refine score and cuts. */
+  private async scanAudio() {
+    const src = this.source;
+    if (!(src instanceof TwitchVodSource) || this.scanning) return;
+    this.scanning = true;
+    try {
+      for (;;) {
+        const m = this.state.moments.find((x) => !x.audio && !x.manual && x.status === 'found' && !this.scanned.has(x.id));
+        if (!m || this.abort.signal.aborted) break;
+        this.scanned.add(m.id);
+        const st = getSettings();
+        const from = Math.max(0, m.peak - st.before - 6);
+        const to = Math.min(this.state.duration, m.peak + st.after + 4);
+        try {
+          const range = await src.getAudioRange(from, to, this.abort.signal);
+          if (!range) break;
+          const pcm = await extractPcm(range);
+          const cur = this.state.moments.find((x) => x.id === m.id);
+          if (cur && cur.status === 'found') this.setMoment(m.id, this.applyAudio(cur, audioFeatures(pcm, 16000), from));
+        } catch {
+          /* audio is a bonus: keep the chat-only score */
+        }
+      }
+    } finally {
+      this.scanning = false;
+    }
   }
 
   /** "Clip it!" button: the last N seconds of a live, or around a VOD time. */
@@ -340,11 +409,37 @@ export class Session {
     try {
       this.setMoment(id, { status: 'working', stage: 'prepare', progress: null });
       const avail = src.available();
-      const range = await src.getRange(Math.max(m.start, avail.start), Math.min(m.end, avail.end), this.abort.signal);
+      let cur = m;
+      let range;
+      if (!m.audio && !m.manual) {
+        // Download a little extra around the clip, listen to it, then cut.
+        const wideStart = Math.max(avail.start, m.start - 6);
+        const wideEnd = Math.min(avail.end, m.end + 4);
+        const wide = await src.getRange(wideStart, wideEnd, this.abort.signal);
+        try {
+          const pcm = await extractPcm(wide);
+          this.setMoment(id, this.applyAudio(m, audioFeatures(pcm, 16000), wideStart));
+          cur = this.state.moments.find((x) => x.id === id)!;
+        } catch {
+          /* keep the chat-based cut */
+        }
+        const start = Math.max(wideStart, cur.start);
+        const end = Math.min(wideEnd, cur.end);
+        range = { ...wide, offset: wide.offset + (start - wideStart), duration: end - start };
+      } else {
+        range = await src.getRange(Math.max(m.start, avail.start), Math.min(m.end, avail.end), this.abort.signal);
+      }
       const formats: Format[] = [...(st.horizontal ? ['horizontal' as const] : []), ...(st.vertical ? ['vertical' as const] : [])];
       const res = await renderClip(
         range,
-        { formats: formats.length ? formats : ['vertical'], quality: st.quality, layout: layoutFor(this.layoutKey), subtitles: st.subtitles, language: st.language },
+        {
+          formats: formats.length ? formats : ['vertical'],
+          quality: st.quality,
+          layout: layoutFor(this.layoutKey),
+          subtitles: st.subtitles,
+          language: st.language,
+          hook: st.hookTitle ? cur.hook : undefined,
+        },
         (stage, p) => this.setMoment(id, { stage, progress: p }),
       );
       this.setMoment(id, {
@@ -389,4 +484,14 @@ export class Session {
 
 export function useSession(s: Session): SessionState {
   return useSyncExternalStore(s.subscribe, s.getSnapshot);
+}
+
+/** A short title from what chat typed the most ("CHAT: LMAOOO"). */
+function hookFrom(chat: ChatFeatures): string {
+  const top = chat.topReaction
+    .replace(/[^\p{L}\p{N}\s!?'.,-]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!top || top.length > 28) return '';
+  return `CHAT: ${top}`;
 }

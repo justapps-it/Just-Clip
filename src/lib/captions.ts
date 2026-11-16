@@ -53,7 +53,7 @@ export function groupWords(words: Word[], maxWords: number, maxChars = 22): Word
   return groups;
 }
 
-export function buildAss(words: Word[], style: CaptionStyle): string {
+export function buildAss(words: Word[], style: CaptionStyle, hook?: { text: string; until: number; y: number }): string {
   const outline = Math.round(style.fontSize / 9);
   const header = `[Script Info]
 ScriptType: v4.00+
@@ -65,6 +65,7 @@ ScaledBorderAndShadow: yes
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 Style: Cap,${FONT},${style.fontSize},${WHITE},${WHITE},&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,${outline},${Math.round(outline / 2)},5,40,40,0,1
+Style: Hook,${FONT},${Math.round(style.fontSize * 0.8)},${WHITE},${WHITE},${ORANGE},${ORANGE},0,0,0,0,100,100,0,0,3,${Math.round(style.fontSize * 0.22)},0,5,60,60,0,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -72,6 +73,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   const x = Math.round(style.width / 2);
   const y = Math.round(style.y);
   const lines: string[] = [];
+  if (hook?.text.trim()) {
+    // Title card for the first seconds: the "why you should watch" line.
+    lines.push(`Dialogue: 1,${ts(0)},${ts(hook.until)},Hook,,0,0,0,,{\\pos(${x},${Math.round(hook.y)})\\fad(120,200)}${escapeAss(hook.text.toUpperCase())}`);
+  }
   for (const group of groupWords(words, style.maxWords)) {
     const groupEnd = group.at(-1)!.end;
     group.forEach((w, i) => {

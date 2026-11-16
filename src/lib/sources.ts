@@ -28,6 +28,7 @@ export interface ClipSource {
 // ---------------------------------------------------------------------------
 export class TwitchVodSource implements ClipSource {
   private segments: Segment[] = [];
+  private audioSegments: Segment[] = [];
   constructor(
     public id: string,
     public duration: number,
@@ -35,11 +36,28 @@ export class TwitchVodSource implements ClipSource {
 
   async load(maxHeight: number) {
     const master = await fetchText(api.twitchVodPlaylist(this.id));
-    const variant = pickVariant(parseMaster(master, location.origin + '/'), maxHeight);
+    const variants = parseMaster(master, location.origin + '/');
+    const variant = pickVariant(variants, maxHeight);
     if (!variant) throw new Error('no_variant');
     const media = parseMedia(await fetchText(variant.url), variant.url);
     this.segments = media.segments;
+    const audio = variants.find((v) => v.audioOnly);
+    if (audio) {
+      try {
+        this.audioSegments = parseMedia(await fetchText(audio.url), audio.url).segments;
+      } catch {
+        /* audio-only is optional */
+      }
+    }
     return variant;
+  }
+
+  /** Audio-only stream for a range (a few KB/s), for loudness analysis. */
+  async getAudioRange(start: number, end: number, signal?: AbortSignal): Promise<MediaRange | null> {
+    const segs = this.audioSegments.filter((s) => s.start + s.duration > start && s.start < end);
+    if (!segs.length) return null;
+    const data = await pool(segs, 4, (s) => fetchBytes(s.url, signal));
+    return { files: [{ name: 'audio.ts', data: concatBytes(data) }], kind: 'ts', offset: Math.max(0, start - segs[0].start), duration: end - start };
   }
 
   available() {
