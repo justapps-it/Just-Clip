@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>JustClip — clip automatiche dalle tue live</title>
+    <meta name="description" content="JustClip turns Twitch and YouTube streams into horizontal and vertical clips with subtitles, finding the best moments from chat peaks. Runs in your browser. Open source by JustApps." />
+    <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f0f10" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/favicon.ico?v=1" sizes="48x48" />
+    <link rel="icon" href="/favicon.svg?v=1" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/icon-180.png?v=1" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="canonical" href="https://clip.justapps.it/" />
+    <meta property="og:title" content="JustClip — your stream, already clipped" />
+    <meta property="og:description" content="Automatic clips from Twitch and YouTube chat peaks, 16:9 and 9:16 with subtitles. In your browser." />
+    <meta property="og:image" content="https://clip.justapps.it/icons/icon-512.png" />
+    <meta property="og:url" content="https://clip.justapps.it/" />
+    <script>
+      try {
+        var t = localStorage.getItem('justclip-theme');
+        if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>JustClip needs JavaScript.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
