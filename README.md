@@ -27,15 +27,17 @@ Everything except fetching public stream data runs in the browser. The edge Work
 
 The signed APK is published as a GitHub release asset: [latest JustClip.apk](https://github.com/justapps-it/Just-Clip/releases/latest/download/JustClip.apk).
 
+Release a new version with one command (tests, version bump, signed build, commit, push, GitHub release, download check):
+
 ```bash
-cd android
-./gradlew :app:testDebugUnitTest       # JVM tests (parsing, detection, virality, layout)
-./gradlew :app:assembleRelease         # needs JUSTCLIP_KEYSTORE* in ~/.gradle/gradle.properties
-cp app/build/outputs/apk/release/app-release.apk release/JustClip.apk
-git commit -am "Android 1.0.1" && git push   # the workflow creates the android-v1.0.1 release
+npm run release:android            # patch: 1.0.1 → 1.0.2 (or: minor, major, 2.0.0)
 ```
 
-Then update `src/app-release.ts` (version, size, SHA-256) and bump `versionCode` / `versionName` in `android/app/build.gradle.kts` before building. The release keystore is kept outside the repository: keep a backup, Android only accepts updates signed with the same key.
+It needs the Android SDK (`ANDROID_HOME`, default `~/android-sdk`) and the signing key: `JUSTCLIP_KEYSTORE`, `JUSTCLIP_KEYSTORE_PASSWORD` in `~/.gradle/gradle.properties`. The key is kept outside the repository: keep a backup, Android only accepts updates signed with the same key. The site reads the latest release from the GitHub API, so the download card updates by itself.
+
+```bash
+cd android && ./gradlew :app:testDebugUnitTest   # JVM tests only
+```
 
 ## Configuration
 

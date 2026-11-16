@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "e2e": "node scripts/e2e.mjs",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "release:android": "node scripts/release-android.mjs"
   },
   "dependencies": {
     "@ffmpeg/core": "^0.12.10",

@@ -3,7 +3,7 @@ import { api, ApiError, parseLink, type TwitchChannel, type YouTubeLive } from '
 import { TabRecorder } from '../lib/sources';
 import { useI18n } from '../i18n';
 import { Session } from '../session';
-import { ANDROID } from '../app-release';
+import { useAndroidRelease } from '../app-release';
 
 interface Props {
   onSession(s: Session): void;
@@ -17,6 +17,7 @@ const fmtDuration = (s: number) => {
 
 export function Home({ onSession }: Props) {
   const { t, lang } = useI18n();
+  const ANDROID = useAndroidRelease();
   const [link, setLink] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,7 +129,8 @@ export function Home({ onSession }: Props) {
               <a href={ANDROID.releases} target="_blank" rel="noreferrer">
                 GitHub Releases
               </a>{' '}
-              · SHA-256 {ANDROID.sha256.slice(0, 12)}…
+              {ANDROID.date ? ` · ${new Date(ANDROID.date).toLocaleDateString(lang, { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
+              {ANDROID.sha256 ? ` · SHA-256 ${ANDROID.sha256.slice(0, 12)}…` : ''}
             </p>
           </div>
         </div>
