@@ -21,6 +21,21 @@ Everything except fetching public stream data runs in the browser. The edge Work
 
 **YouTube**: JustClip does not download from YouTube or bypass its protections. The video comes from the user's own browser tab; chat comes from the official API.
 
+## Android app
+
+`android/` is a native Kotlin app (Jetpack Compose + Media3) that clips **Twitch lives in the background**: a foreground service records the stream into a rolling buffer, reads chat over IRC, detects moments with the same virality model as the web app and renders 16:9 / 9:16 clips with the phone's hardware encoder (facecam-over-gameplay layout in a GPU shader, title card), saving them to *Movies/JustClip* with a notification for each clip.
+
+The signed APK is published at [clip.justapps.it/download/JustClip.apk](https://clip.justapps.it/download/JustClip.apk).
+
+```bash
+cd android
+./gradlew :app:testDebugUnitTest       # JVM tests (parsing, detection, virality, layout)
+./gradlew :app:assembleRelease         # needs JUSTCLIP_KEYSTORE* in ~/.gradle/gradle.properties
+cp app/build/outputs/apk/release/app-release.apk ../public/download/JustClip.apk
+```
+
+Then update `src/app-release.ts` (version, size, SHA-256). The release keystore is kept outside the repository: keep a backup, Android only accepts updates signed with the same key.
+
 ## Configuration
 
 The YouTube chat needs a YouTube Data API v3 key stored as a Worker secret:

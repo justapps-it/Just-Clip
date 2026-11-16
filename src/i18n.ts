@@ -3,6 +3,14 @@ import { createContext, useContext } from 'react';
 export type Lang = 'it' | 'en';
 
 const en = {
+  appBadge: 'Android app',
+  appTitle: 'JustClip for Android',
+  appText: 'Leave it running: it records the Twitch live in the background, even with the screen off, and saves the best moments to your gallery with a notification for each clip.',
+  appDownload: 'Download the APK',
+  appInstall: 'Open the file on your phone and allow installing from this source. Android 10 or newer.',
+  appF1: 'Works in background',
+  appF2: 'Hardware encoding, fast',
+  appF3: '16:9 and 9:16 in the gallery',
   virality: 'Virality',
   hookTitleSetting: 'Title card at the start',
   hookPlaceholder: 'Title for the first seconds (empty = none)',
@@ -124,6 +132,14 @@ const en = {
 export type Key = keyof typeof en;
 
 const it: Record<Key, string> = {
+  appBadge: 'App Android',
+  appTitle: 'JustClip per Android',
+  appText: 'Lasciala andare: registra la live Twitch in background, anche a schermo spento, e salva i momenti migliori nella galleria con una notifica per ogni clip.',
+  appDownload: 'Scarica l’APK',
+  appInstall: 'Apri il file sul telefono e consenti l’installazione da questa fonte. Android 10 o successivo.',
+  appF1: 'Funziona in background',
+  appF2: 'Codifica hardware, veloce',
+  appF3: '16:9 e 9:16 in galleria',
   virality: 'Viralità',
   hookTitleSetting: 'Titolo all’inizio della clip',
   hookPlaceholder: 'Titolo per i primi secondi (vuoto = nessuno)',

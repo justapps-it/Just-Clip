@@ -3,6 +3,7 @@ import { api, ApiError, parseLink, type TwitchChannel, type YouTubeLive } from '
 import { TabRecorder } from '../lib/sources';
 import { useI18n } from '../i18n';
 import { Session } from '../session';
+import { ANDROID } from '../app-release';
 
 interface Props {
   onSession(s: Session): void;
@@ -99,6 +100,33 @@ export function Home({ onSession }: Props) {
           </button>
         </form>
         {error && <p className="form-error">{error}</p>}
+      </section>
+
+      <section className="android" id="android">
+        <div className="android-card">
+          <img className="android-icon" src="/icons/icon-192.png?v=1" alt="" width="96" height="96" />
+          <div className="android-body">
+            <span className="android-badge">{t('appBadge')} · v{ANDROID.version}</span>
+            <h2>{t('appTitle')}</h2>
+            <p>{t('appText')}</p>
+            <ul className="android-features">
+              <li>{t('appF1')}</li>
+              <li>{t('appF2')}</li>
+              <li>{t('appF3')}</li>
+            </ul>
+          </div>
+          <div className="android-cta">
+            <a className="btn android-download" href={ANDROID.url} download="JustClip.apk">
+              <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M17.6 9.48l1.84-3.18a.38.38 0 00-.66-.38l-1.86 3.22a11.4 11.4 0 00-9.84 0L5.22 5.92a.38.38 0 00-.66.38L6.4 9.48A10.8 10.8 0 001 18h22a10.8 10.8 0 00-5.4-8.52zM7 15.25a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5zm10 0a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5z" />
+              </svg>
+              {t('appDownload')}
+              <small>{ANDROID.sizeMB} MB</small>
+            </a>
+            <p className="android-install">{t('appInstall')}</p>
+            <p className="android-hash" title="SHA-256">SHA-256 {ANDROID.sha256.slice(0, 16)}…</p>
+          </div>
+        </div>
       </section>
 
       {channel && (

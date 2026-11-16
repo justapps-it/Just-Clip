@@ -72,6 +72,12 @@ export default function App() {
             <span>JustClip</span>
           </a>
           <nav className="top-actions">
+            <a className="app-pill" href="/#android" onClick={() => session && back()}>
+              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M17.6 9.48l1.84-3.18a.38.38 0 00-.66-.38l-1.86 3.22a11.4 11.4 0 00-9.84 0L5.22 5.92a.38.38 0 00-.66.38L6.4 9.48A10.8 10.8 0 001 18h22a10.8 10.8 0 00-5.4-8.52zM7 15.25a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5zm10 0a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5z" />
+              </svg>
+              <span>{t('appBadge')}</span>
+            </a>
             <a className="nav-link hide-sm" href="https://www.justapps.it">
               JustApps
             </a>
