@@ -1635,6 +1635,9 @@ input[type='checkbox'] {
   font: 500 11px var(--mono);
   color: #6e6e73;
 }
+.android-hash a {
+  color: #a1a1a6;
+}
 @media (max-width: 820px) {
   .android-card {
     grid-template-columns: 1fr;

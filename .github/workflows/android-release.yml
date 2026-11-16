@@ -1,0 +1,41 @@
+name: Android release
+
+# Push a tag like "android-v1.0.0" to publish android/release/JustClip.apk
+# (built and signed locally, see README) as a GitHub release asset.
+on:
+  push:
+    tags: ['android-v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag (e.g. android-v1.0.0)
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - name: Checksum
+        run: sha256sum android/release/JustClip.apk | tee android/release/JustClip.apk.sha256
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: JustClip for Android ${{ github.event.inputs.tag || github.ref_name }}
+          make_latest: true
+          files: |
+            android/release/JustClip.apk
+            android/release/JustClip.apk.sha256
+          body: |
+            **JustClip for Android** — automatic clips from Twitch lives, in the background.
+
+            1. Download **JustClip.apk** below on your phone.
+            2. Open it and allow installing from this source (Android 10 or newer).
+            3. Pick a live Twitch channel and press *Start clipping in background*: clips are saved to *Movies/JustClip*.
+
+            🇮🇹 Scarica **JustClip.apk** sul telefono, aprilo e consenti l'installazione da questa fonte. Le clip finiscono in *Movies/JustClip*.

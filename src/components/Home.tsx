@@ -116,7 +116,7 @@ export function Home({ onSession }: Props) {
             </ul>
           </div>
           <div className="android-cta">
-            <a className="btn android-download" href={ANDROID.url} download="JustClip.apk">
+            <a className="btn android-download" href={ANDROID.url} rel="noopener">
               <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
                 <path fill="currentColor" d="M17.6 9.48l1.84-3.18a.38.38 0 00-.66-.38l-1.86 3.22a11.4 11.4 0 00-9.84 0L5.22 5.92a.38.38 0 00-.66.38L6.4 9.48A10.8 10.8 0 001 18h22a10.8 10.8 0 00-5.4-8.52zM7 15.25a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5zm10 0a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5z" />
               </svg>
@@ -124,7 +124,12 @@ export function Home({ onSession }: Props) {
               <small>{ANDROID.sizeMB} MB</small>
             </a>
             <p className="android-install">{t('appInstall')}</p>
-            <p className="android-hash" title="SHA-256">SHA-256 {ANDROID.sha256.slice(0, 16)}…</p>
+            <p className="android-hash" title={`SHA-256 ${ANDROID.sha256}`}>
+              <a href={ANDROID.releases} target="_blank" rel="noreferrer">
+                GitHub Releases
+              </a>{' '}
+              · SHA-256 {ANDROID.sha256.slice(0, 12)}…
+            </p>
           </div>
         </div>
       </section>
