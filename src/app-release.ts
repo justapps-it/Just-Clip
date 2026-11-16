@@ -17,9 +17,9 @@ export interface AndroidRelease {
 export const ANDROID: AndroidRelease = {
   url: `https://github.com/${REPO}/releases/latest/download/JustClip.apk`,
   releases: `https://github.com/${REPO}/releases/latest`,
-  version: '1.0.0',
+  version: '1.0.1',
   sizeMB: 5.7,
-  sha256: 'e7846c4c0c525e1583fdf245bb735263fd050096cf33b26d48eddf34db8292c8',
+  sha256: 'ce38bd1cccbb075955337137274ba46c9fc4d0b922e439d73221755715a6e4de',
 };
 
 let cached: Promise<AndroidRelease> | undefined;
